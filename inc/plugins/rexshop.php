@@ -221,9 +221,9 @@ function rexshop_payment_page()
                         continue;
                     }
 
-                    $product['prices'] = array_filter($product['prices'], function ($price) use ($mybb) {
+                    $product['prices'] = array_values(array_filter($product['prices'], function ($price) use ($mybb) {
                         return $price['plan_id'] == $mybb->input['plan_id'];
-                    });
+                    }));
 
                     $selectedProduct = $product;
                     break;
@@ -857,9 +857,9 @@ function rexshop_admin()
                         continue;
                     }
 
-                    $product['prices'] = array_filter($product['prices'], function ($price) use ($mybb) {
+                    $product['prices'] = array_values(array_filter($product['prices'], function ($price) use ($mybb) {
                         return $price['plan_id'] == $mybb->input['plan_id'];
-                    });
+                    }));
 
                     $selectedProduct = $product;
                     break;
