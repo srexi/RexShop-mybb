@@ -657,7 +657,7 @@ function rexshop_products_usergroup($product)
 
     $usergroup = -1;
 
-    if (property_exists($product, 'prices')) {
+    if (isset($product['prices']) {
         foreach ($product['prices'] as $price) {
             foreach ($price['addons'] as $addon) {
                 if (strtolower($addon['name']) !== 'usergroup') {
@@ -678,7 +678,7 @@ function rexshop_products_usergroup($product)
                 break 2;
             }
         }
-    } else if (property_exists($product, 'addons')) {
+    } else if (isset($product['addons'])) {
         foreach ($product['addons'] as $addon) {
             if (strtolower($addon['name']) !== 'usergroup') {
                 continue;
