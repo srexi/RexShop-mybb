@@ -657,7 +657,7 @@ function rexshop_products_usergroup($product)
 
     $usergroup = -1;
 
-    if (isset($product['prices']) {
+    if (isset($product['prices'])) {
         foreach ($product['prices'] as $price) {
             foreach ($price['addons'] as $addon) {
                 if (strtolower($addon['name']) !== 'usergroup') {
