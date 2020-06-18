@@ -25,7 +25,7 @@ You can create multiple addons with the same name if you want different producs 
 
 # Video Tutorial
 See the setup process in a short video:
-https://www.youtube.com/watch?v=30HadL0iWqk
+https://www.youtube.com/watch?v=OzDC_Nkdwm4
 
 # Webhook URL
 To setup the webhook url properly make sure you set the link to the root of your misc.php file in the root of your forum like so:
