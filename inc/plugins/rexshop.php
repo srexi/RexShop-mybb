@@ -623,6 +623,8 @@ function rexshop_uid_from_custom($request)
 
 function rexshop_purchased_usergroup($request)
 {
+    global $db;
+
     $usergroup = -1;
 
     foreach ($request['products'] as $product) {
@@ -631,11 +633,72 @@ function rexshop_purchased_usergroup($request)
                 continue;
             }
 
-            $usergroup = intval($addon['value']);
+            if (is_numeric($addon['value'])) {
+                $usergroup = intval($addon['value']);
+
+                break 2;
+            }
+
+            $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "usergroups` WHERE LOWER(`title`)='" . strtolower($usergroup) . "' LIMIT 1");
+            if ($db->num_rows($query) > 0) {
+                $usergroup = (int) $db->fetch_field($query, "gid");
+            }
 
             break 2;
         }
     }
+
+    return $usergroup;
+}
+
+function rexshop_products_usergroup($product)
+{
+    global $db;
+
+    $usergroup = -1;
+
+    if (property_exists($product, 'prices')) {
+        foreach ($product['prices'] as $price) {
+            foreach ($price['addons'] as $addon) {
+                if (strtolower($addon['name']) !== 'usergroup') {
+                    continue;
+                }
+
+                if (is_numeric($addon['value'])) {
+                    $usergroup = intval($addon['value']);
+
+                    break 2;
+                }
+
+                $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "usergroups` WHERE LOWER(`title`)='" . strtolower($usergroup) . "' LIMIT 1");
+                if ($db->num_rows($query) > 0) {
+                    $usergroup = (int) $db->fetch_field($query, "gid");
+                }
+
+                break 2;
+            }
+        }
+    } else if (property_exists($product, 'addons')) {
+        foreach ($product['addons'] as $addon) {
+            if (strtolower($addon['name']) !== 'usergroup') {
+                continue;
+            }
+
+            if (is_numeric($addon['value'])) {
+                $usergroup = intval($addon['value']);
+
+                break 2;
+            }
+
+            $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "usergroups` WHERE LOWER(`title`)='" . strtolower($usergroup) . "' LIMIT 1");
+            if ($db->num_rows($query) > 0) {
+                $usergroup = (int) $db->fetch_field($query, "gid");
+            }
+
+            break 2;
+        }
+    }
+
 
     return $usergroup;
 }
@@ -807,18 +870,7 @@ function rexshop_admin()
                 redirect('index.php?module=user-rexshop', $lang->error_invalid_subscription);
             }
 
-            $usergroup = -1;
-            foreach ($selectedProduct['prices'] as $price) {
-                foreach ($price['addons'] as $addon) {
-                    if (strtolower($addon['name']) !== 'usergroup') {
-                        continue;
-                    }
-
-                    $usergroup = intval($addon['value']);
-
-                    break 2;
-                }
-            }
+            $usergroup = rexshop_products_usergroup($selectedProduct);
 
             if ($usergroup < 1) {
                 redirect('index.php?module=user-rexshop', $lang->error_invalid_subscription);
@@ -895,14 +947,7 @@ function rexshop_admin()
             foreach ($product['prices'] as $price) {
                 $table->construct_cell("<div>{$product['name']} - {$price['name']}</div>");
 
-                $purchasedUsergroup = null;
-                foreach ($price['addons'] as $addon) {
-                    if (strtolower($addon['name']) !== 'usergroup') {
-                        continue;
-                    }
-
-                    $purchasedUsergroup = $addon['value'];
-                }
+                $purchasedUsergroup = rexshop_products_usergroup($price);
 
                 if (isset($purchasedUsergroup) && isset($groups[$purchasedUsergroup])) {
                     $table->construct_cell(htmlspecialchars_uni($groups[$purchasedUsergroup]), ['class' => 'align_center']);
