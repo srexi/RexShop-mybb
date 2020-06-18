@@ -23,6 +23,10 @@ And in the value field you write the id of the usergroup you would like to give 
 Then attach the addon to all your products which awards that usergroup.
 You can create multiple addons with the same name if you want different producs to give different usergroups.
 
+# Video Tutorial
+See the setup process in a short video:
+https://www.youtube.com/watch?v=LjpFWW3Oyxk
+
 # Webhook URL
 To setup the webhook url properly make sure you set the link to the root of your misc.php file in the root of your forum like so:
 http://yoursite.com/forum/misc.php?payment=rexshop
