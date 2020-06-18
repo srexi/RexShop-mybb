@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.0",
+        "version"        => "1.01",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -216,13 +216,17 @@ function rexshop_payment_page()
 
             $selectedProduct = null;
             foreach ($products as $product) {
+                if (!isset($mybb->input[$product['sku']])) {
+                    continue;
+                }
+
                 foreach ($product['prices'] as $price) {
-                    if ($price['plan_id'] != $mybb->input['plan_id']) {
+                    if ($price['plan_id'] != $mybb->input['plan_id'][$product['sku']]) {
                         continue;
                     }
 
-                    $product['prices'] = array_values(array_filter($product['prices'], function ($price) use ($mybb) {
-                        return $price['plan_id'] == $mybb->input['plan_id'];
+                    $product['prices'] = array_values(array_filter($product['prices'], function ($price) use ($mybb, $product) {
+                        return $price['plan_id'] == $mybb->input['plan_id'][$product['sku']];
                     }));
 
                     $selectedProduct = $product;
@@ -264,11 +268,11 @@ function rexshop_payment_page()
                             ' . $product['description'] . '
                         </div>
                         <div align="right" style="margin-right: 100px;">
-                            <select style="width: 120px;" name="plan_id">
+                            <select style="width: 120px;" name="plan_id[' . $product["sku"] . ']">
                                 ' . $options . '
                             </select> 
                             
-                            <input type="submit" name="item" value="Order" class="button" />
+                            <button type="submit" name="' . $product["sku"] . '" class="button">Order</button>
                         </div>
                     </fieldset>';
             }
