@@ -687,7 +687,7 @@ function rexshop_products_usergroup($product)
             if (is_numeric($addon['value'])) {
                 $usergroup = intval($addon['value']);
 
-                break 2;
+                break;
             }
 
             $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "usergroups` WHERE LOWER(`title`)='" . strtolower($usergroup) . "' LIMIT 1");
@@ -695,7 +695,7 @@ function rexshop_products_usergroup($product)
                 $usergroup = (int) $db->fetch_field($query, "gid");
             }
 
-            break 2;
+            break;
         }
     }
 
