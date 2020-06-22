@@ -176,7 +176,13 @@ function rexshop_usercp_menu()
 {
     global $mybb, $usercpmenu;
 
-    $usercpmenu .= '<tr><td class="trow1 smalltext" style="display:flex;"><img src="https://shop.rexdigital.group/img/brand/logo.svg" width="17" height="17"><a href="' . $mybb->settings['bburl'] . '/misc.php?action=store" class="usercp_nav_item" style="background-image: none;padding-left: 7px;">Store</a></td></tr>';
+    $usercpmenu .= '
+        <tr>
+            <td class="trow1 smalltext" style="display:flex;">
+                <img src="https://shop.rexdigital.group/img/brand/logo.svg" width="17" height="17">
+                <a href="' . $mybb->settings['bburl'] . '/misc.php?action=store" class="usercp_nav_item" style="background-image: none;padding-left: 7px;">Store</a>
+            </td>
+        </tr>';
 }
 
 function rexshop_payment_page()
@@ -241,13 +247,13 @@ function rexshop_payment_page()
             add_breadcrumb("{$selectedProduct['name']} - {$selectedProduct['prices'][0]['name']} ({$selectedProduct['prices'][0]['time']} {$selectedProduct['prices'][0]['duration']}) - {$selectedProduct['prices'][0]['currency']}{$selectedProduct['prices'][0]['price']}", "misc.php?action=store");
 
             $custom = base64_encode(serialize([
-                'uid' => $mybb->user['uid'],
+                'uid' => (int) $mybb->user['uid'],
             ]));
 
             $contents .= "
                 <form method='POST' action='https://shop.rexdigital.group/checkout'>
-                    <input name='client_id' value='{$mybb->settings['rexshop_client_id']}' type='hidden'>
-                    <input name='products[0][plan_id]' value='{$selectedProduct['prices'][0]['plan_id']}' type='hidden'>
+                    <input name='client_id' value='" . rexshop_regex_escape($mybb->settings['rexshop_client_id'], '/[^a-zA-Z0-9]/') . "' type='hidden'>
+                    <input name='products[0][plan_id]' value='" . rexshop_regex_escape($selectedProduct['prices'][0]['plan_id'], '/[^a-zA-Z0-9]/') . "' type='hidden'>
                     <input name='custom' value='${custom}' type='hidden'>
                     <button class='button' type='submit'>Go to checkout</button>
                 </form>";
@@ -258,7 +264,7 @@ function rexshop_payment_page()
             foreach ($products as $product) {
                 $options = '';
                 foreach ($product['prices'] as $price) {
-                    $options .= '<option value="' . $price['plan_id'] . '">' . $price['name'] . ' (' . $price['time'] . ' ' . $price['duration']  . ')</option>';
+                    $options .= '<option value="' . $price['plan_id'] . '">' . $price['name'] . ' ' . $price['currency'] . $price['price'] . ' (' . $price['time'] . ' ' . $price['duration']  . ')</option>';
                 }
 
                 $payments .= '
@@ -268,7 +274,7 @@ function rexshop_payment_page()
                             ' . $product['description'] . '
                         </div>
                         <div align="right" style="margin-right: 100px;">
-                            <select style="width: 120px;" name="plan_id[' . $product["sku"] . ']">
+                            <select style="width: 240px;" name="plan_id[' . $product["sku"] . ']">
                                 ' . $options . '
                             </select> 
                             
@@ -503,15 +509,15 @@ function handleDisputeCanceledTransaction($request)
 
     $completed = REXSHOP_STATUS_COMPLETED;
 
-    $suspendedSecondsQuery = $db->query("SELECT * FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `transaction_id`='" .  $request['order']['transaction_id'] . "' AND `transaction_status`='" . $completed . "'");
+    $suspendedSecondsQuery = $db->query("SELECT * FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `transaction_id`='" .  rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . (int) $completed . "'");
     $suspendedSeconds = $db->fetch_field($suspendedSecondsQuery, "suspended_seconds");
     $currentEnddate = $db->fetch_field($suspendedSecondsQuery, "enddate");
 
     $db->update_query("rexshop_logs", [
-        'enddate' => TIME_NOW >= $currentEnddate ? TIME_NOW + $suspendedSeconds : $currentEnddate + $suspendedSeconds,
+        'enddate' => TIME_NOW >= intval($currentEnddate) ? TIME_NOW + intval($suspendedSeconds) : intval($currentEnddate) + intval($suspendedSeconds),
         'suspended_seconds' => 0,
         'expired' => 0,
-    ], "transaction_id='" . $request['order']['transaction_id'] . "' AND `transaction_status`='" . $completed . "'");
+    ], "transaction_id='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . (int) $completed . "'");
 
     //Figure out what usergroup the user is receiving.
     $usergroup = rexshop_purchased_usergroup($request);
@@ -576,13 +582,12 @@ function handleDisputedTransaction($request)
 
     $completed = REXSHOP_STATUS_COMPLETED;
 
-
     if (($remainingSeconds - $secondsToSuspend) <= 0) {
-        $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `transaction_id`='" . $request['order']['transaction_id'] . "' AND `transaction_status`='" . $completed . "'");
+        $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `transaction_id`='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . (int) $completed . "'");
         rexshop_change_usergroup($userId, REXSHOP_USERGROUP_EXPIRED);
     }
 
-    rexshop_send_pm("Open Subscription Dispute", "You have opened a dispute. Please resolve this in ban appeals ASAP.", $userId);
+    rexshop_send_pm("Open Subscription Dispute", "You have opened a dispute. Please resolve this in ban appeals ASAP.", (int) $userId);
 
     return rexshop_on_success();
 }
@@ -622,7 +627,7 @@ function rexshop_uid_from_custom($request)
 
     $decoded = unserialize(base64_decode($request['custom']));
 
-    return (int) $decoded['uid'] ?? $userId;
+    return (int) $decoded['uid'] ?? (int) $userId;
 }
 
 function rexshop_purchased_usergroup($request)
@@ -720,7 +725,7 @@ function rexshop_remaining_seconds($userId, $expireExisting = true)
 
     $remainingSeconds = 0;
 
-    $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `uid`='" . $userId . "' AND `expired`='0'");
+    $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `uid`='" . (int) $userId . "' AND `expired`='0'");
     $resultCount = $db->num_rows($query);
     if ($resultCount <= 0) {
         return $remainingSeconds;
@@ -735,7 +740,7 @@ function rexshop_remaining_seconds($userId, $expireExisting = true)
     }
 
     if ($expireExisting === true) {
-        $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `uid`='" . $userId . "'");
+        $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `uid`='" . (int) $userId . "'");
     }
 }
 
@@ -842,12 +847,12 @@ function rexshop_admin()
         verify_post_check($mybb->input['my_post_key']);
 
         if (strtolower($mybb->input['action']) === 'upgrade') {
-            $query = $db->query("SELECT uid,username,usergroup FROM `" . TABLE_PREFIX . "users` WHERE LOWER(`username`)='" . strtolower($mybb->input['username']) . "' LIMIT 1");
+            $query = $db->query("SELECT uid,username,usergroup FROM `" . TABLE_PREFIX . "users` WHERE LOWER(`username`)='" . strtolower($db->escape_string($mybb->input['username'])) . "' LIMIT 1");
             if ($db->num_rows($query) <= 0) {
                 redirect('index.php?module=user-rexshop', $lang->error_invalid_username);
             }
 
-            $userId = $db->fetch_field($query, "uid");
+            $userId = (int) $db->fetch_field($query, "uid");
             if (!isset($userId) || $userId < 1) {
                 redirect('index.php?module=user-rexshop', $lang->error_invalid_username);
             }
@@ -993,7 +998,7 @@ function rexshop_transaction_duplicate($request)
 {
     global $db;
 
-    $query = $db->query("SELECT COUNT(*) as resultCount FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `transaction_id`='" . $request['order']['transaction_id'] . "' AND `transaction_status`='" . $request['status'] . "' LIMIT 1");
+    $query = $db->query("SELECT COUNT(*) as resultCount FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `transaction_id`='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . intval($request['status']) . "' LIMIT 1");
 
     return $db->fetch_field($query, "resultCount") > 0;
 }
@@ -1026,7 +1031,7 @@ function rexshop_change_usergroup($userId, $usergroup)
 {
     global $db;
 
-    $db->query("UPDATE `" . TABLE_PREFIX . "users` SET `usergroup`='" . $usergroup . "', `displaygroup`='0' WHERE `uid`='" . $userId . "'");
+    $db->query("UPDATE `" . TABLE_PREFIX . "users` SET `usergroup`='" . (int) $usergroup . "', `displaygroup`='0' WHERE `uid`='" . (int) $userId . "'");
 }
 
 /**
@@ -1040,7 +1045,7 @@ function rexshop_change_on_unban_usergroup($userId, $usergroup)
 {
     global $db;
 
-    $db->update_query("banned", ['oldgroup' => $usergroup], "uid='" . $userId . "' AND lifted='0'");
+    $db->update_query("banned", ['oldgroup' => intval($usergroup)], "uid='" . (int) $userId . "' AND lifted='0'");
 }
 
 /**
@@ -1055,9 +1060,9 @@ function rexshop_unban_user($userId, $reason = null)
     global $db;
 
     if (is_null($reason)) {
-        $db->update_query("banned", ['lifted' => 1], "uid='" . $userId . "'");
+        $db->update_query("banned", ['lifted' => 1], "uid='" . (int) $userId . "'");
     } else {
-        $db->update_query("banned", ['lifted' => 1], "uid='" . $userId . "' AND reason='" . $reason . "'");
+        $db->update_query("banned", ['lifted' => 1], "uid='" . (int) $userId . "' AND reason='" . rexshop_regex_escape($reason, '/[^a-zA-Z0-9 \.\,\!\(\)]/') . "'");
     }
 
     $oldGroupQuery = $db->query("SELECT `id`,`uid`,`oldgroup` FROM `" . TABLE_PREFIX . "banned` WHERE `uid`='" . $userId . "' ORDER BY `id` DESC LIMIT 1");
@@ -1094,16 +1099,16 @@ function rexshop_ban_user($user, $reason = BAN_REASON_CHARGEBACK, $banTime = '--
     rexshop_change_usergroup($user, $banned_groups[0]);
 
     $db->insert_query("banned", [
-        'uid' => $user['uid'],
-        'gid' => $banned_groups[0],
-        'oldgroup' => $user['usergroup'],
+        'uid' => (int) $user['uid'],
+        'gid' => (int) $banned_groups[0],
+        'oldgroup' => (int) $user['usergroup'],
         'oldadditionalgroups' => "",
         'olddisplaygroup' => 0,
-        'admin' => $bannedBy,
-        'dateline' => TIME_NOW,
-        'bantime' => $banTime,
+        'admin' => (int) $bannedBy,
+        'dateline' => (int) TIME_NOW,
+        'bantime' => rexshop_regex_escape($banTime, '/[^\-]/'),
         'lifted' => 0,
-        'reason' => $reason,
+        'reason' => rexshop_regex_escape($reason, '/[^a-zA-Z0-9 \.\,\!\(\)]/'),
     ]);
 }
 
@@ -1120,13 +1125,13 @@ function rexshop_store_transaction($request, $uid, $enddate, $productSku = null)
     global $db;
 
     $db->insert_query("rexshop_logs", [
-        'uid' => $uid,
-        'product_sku' => $productSku,
-        'transaction_id' => $request['order']['transaction_id'],
-        'transaction_status' => $request['status'],
-        'transaction_from' => $request['order']['initiated_at'],
-        'country' => $request['customer']['country'],
-        'enddate' => $enddate,
+        'uid' => intval($uid),
+        'product_sku' => rexshop_regex_escape($productSku, '/[^a-zA-Z0-9]/'),
+        'transaction_id' => rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/'),
+        'transaction_status' => intval($request['status']),
+        'transaction_from' => (int) $request['order']['initiated_at'],
+        'country' => rexshop_regex_escape($request['customer']['country'], '/[^a-zA-Z]/'),
+        'enddate' => (int) $enddate,
         'expired' => $enddate <= 0 ? 1 : 0
     ]);
 }
@@ -1178,7 +1183,7 @@ function rexshop_fetch_products()
         return [];
     }
 
-    $ch = curl_init("https://shop.rexdigital.group/api/v1/products?api_key=" . $mybb->settings['rexshop_api_key']);
+    $ch = curl_init("https://shop.rexdigital.group/api/v1/products?api_key=" . rexshop_regex_escape($mybb->settings['rexshop_api_key'], '/[^a-zA-Z0-9]/'));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = curl_exec($ch);
     curl_close($ch);
@@ -1186,6 +1191,17 @@ function rexshop_fetch_products()
     $result = json_decode($response, true);
 
     return $result['products']['data'] ?? [];
+}
+
+function rexshop_regex_escape($input, $regex = null, $replacement = '')
+{
+    global $db;
+
+    if (!isset($regex)) {
+        return $db->escape_string($input);
+    }
+
+    return preg_replace($regex, $replacement, $db->escape_string($input));
 }
 
 /**
