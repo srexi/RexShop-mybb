@@ -187,7 +187,7 @@ function rexshop_usercp_menu()
 
 function rexshop_payment_page()
 {
-    global $mybb, $header, $headerinclude, $footer, $theme, $lang;
+    global $mybb, $db, $header, $headerinclude, $footer, $theme, $lang;
 
     $lang->load('rexshop');
 
@@ -285,6 +285,16 @@ function rexshop_payment_page()
 
             if (empty($payments)) {
                 $payments = '<p style="text-align: center;">' . $lang->no_subscription_options . '</p>';
+            }
+
+            $enddate = (int) (TIME_NOW + rexshop_remaining_seconds(intval($mybb->user['uid']), false));
+
+            if ($enddate > TIME_NOW) {
+                $offsetquery = $db->simple_select("users", "timezone", "uid='" . intval($mybb->user['uid']) . "'");
+                $offset = (int) $db->fetch_field($offsetquery, "timezone");
+                $enddate += (3600 * $offset);
+
+                $contents .= "Your subscription expires: " . date('j, M Y H:m', $enddate) . " GMT" . (strpos($offset, '-') !== false ? $offset : "+{$offset}") . "<br><br>";
             }
 
             $contents .= "
