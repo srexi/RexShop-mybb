@@ -2,7 +2,7 @@
 
 $l['rexshop'] = 'Rex Digital Shop';
 $l['rexshop_index'] = 'Rex Digital Shop';
-$l['task_rexshop_ran'] = 'RexShop Expired Subscriptions Has Expired';
+$l['task_rexshop_ran'] = 'RexShop Expired Subscriptions Ran Successfully.';
 
 $l['rexshop_gift_desc'] = 'View all your subscription plans and gift your users.';
 $l['rexshop_gift'] = 'Subscriptions';

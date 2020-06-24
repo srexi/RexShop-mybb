@@ -16,7 +16,7 @@ function task_rexshop($task)
     // get expired one-off subscriptions
     $query = $db->query("
 		SELECT r.*, u.uid, u.usergroup as user_usergroup FROM `" . TABLE_PREFIX . "rexshop_logs` r 
-		LEFT JOIN `" . TABLE_PREFIX . "users` u ON (u.uid=r.user_id)
+		LEFT JOIN `" . TABLE_PREFIX . "users` u ON (u.uid=r.uid)
 		WHERE r.enddate>0 AND r.enddate < " . time() . " AND `expired`='0'");
 
     while ($sub = $db->fetch_array($query)) {
@@ -30,7 +30,7 @@ function task_rexshop($task)
         // Leave user group
         $db->update_query('users', [
             'usergroup' => REXSHOP_USERGROUP_EXPIRED
-        ], 'uid=' . $sub['user_id']);
+        ], 'uid=' . $sub['uid']);
 
         // Set subscription to expired
         $db->update_query('rexshop_logs', [

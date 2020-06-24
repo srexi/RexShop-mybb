@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.01",
+        "version"        => "1.03",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -583,7 +583,7 @@ function handleDisputedTransaction($request)
     $completed = REXSHOP_STATUS_COMPLETED;
 
     if (($remainingSeconds - $secondsToSuspend) <= 0) {
-        $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `transaction_id`='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . (int) $completed . "'");
+        $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `transaction_id`='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . $completed . "'");
         rexshop_change_usergroup($userId, REXSHOP_USERGROUP_EXPIRED);
     }
 
@@ -732,7 +732,7 @@ function rexshop_remaining_seconds($userId, $expireExisting = true)
     }
 
     for ($i = 0; $i < $resultCount; $i++) {
-        if (strtolower($db->fetch_field($resultCount, "status", $i)) !== REXSHOP_STATUS_COMPLETED) {
+        if (strtolower($db->fetch_field($query, "transaction_status", $i)) !== REXSHOP_STATUS_COMPLETED) {
             continue;
         }
 
@@ -742,6 +742,8 @@ function rexshop_remaining_seconds($userId, $expireExisting = true)
     if ($expireExisting === true) {
         $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `uid`='" . (int) $userId . "'");
     }
+
+    return intval($remainingSeconds);
 }
 
 /**
@@ -998,7 +1000,7 @@ function rexshop_transaction_duplicate($request)
 {
     global $db;
 
-    $query = $db->query("SELECT COUNT(*) as resultCount FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `transaction_id`='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . intval($request['status']) . "' LIMIT 1");
+    $query = $db->query("SELECT COUNT(*) as resultCount FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `transaction_id`='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . rexshop_regex_escape($request['status'], '/[^a-zA-Z0-9]/') . "' LIMIT 1");
 
     return $db->fetch_field($query, "resultCount") > 0;
 }
@@ -1128,7 +1130,7 @@ function rexshop_store_transaction($request, $uid, $enddate, $productSku = null)
         'uid' => intval($uid),
         'product_sku' => rexshop_regex_escape($productSku, '/[^a-zA-Z0-9]/'),
         'transaction_id' => rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/'),
-        'transaction_status' => intval($request['status']),
+        'transaction_status' => rexshop_regex_escape($request['transaction_status'], '/[^a-zA-Z0-9]/'),
         'transaction_from' => (int) $request['order']['initiated_at'],
         'country' => rexshop_regex_escape($request['customer']['country'], '/[^a-zA-Z]/'),
         'enddate' => (int) $enddate,
