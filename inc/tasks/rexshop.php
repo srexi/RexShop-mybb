@@ -17,7 +17,7 @@ function task_rexshop($task)
     $query = $db->query("
 		SELECT r.*, u.uid, u.usergroup as user_usergroup FROM `" . TABLE_PREFIX . "rexshop_logs` r 
 		LEFT JOIN `" . TABLE_PREFIX . "users` u ON (u.uid=r.uid)
-		WHERE r.enddate>0 AND r.enddate < " . time() . " AND `expired`='0'");
+		WHERE r.enddate>0 AND r.enddate<" . time() . " AND `expired`='0'");
 
     while ($sub = $db->fetch_array($query)) {
         //send pm about expired subscription

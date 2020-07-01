@@ -295,6 +295,8 @@ function rexshop_payment_page()
                 $enddate += (3600 * $offset);
 
                 $contents .= "Your subscription expires: " . date('j, M Y H:m', $enddate) . " GMT" . (strpos($offset, '-') !== false ? $offset : "+{$offset}") . "<br><br>";
+            } else if ($enddate <= -1) {
+                $contents .= "Your subscription will never expire";
             }
 
             $contents .= "
@@ -386,7 +388,7 @@ function handleCompletedTransaction($request)
     //Figure out how much seconds the user has purchased.
     $purchasedSeconds = rexshop_purchased_seconds($request, $request['order']['products'][0]['sku']);
 
-    $newEnddate = TIME_NOW + $remainingSeconds + $purchasedSeconds;
+    $newEnddate = $purchasedSeconds < 0 ? -1 : TIME_NOW + $remainingSeconds + $purchasedSeconds;
 
     rexshop_store_transaction($request, $userId, $newEnddate, $request['order']['products'][0]['sku']);
 
@@ -779,6 +781,10 @@ function rexshop_purchased_seconds($request, $sku)
 
     foreach ($request['order']['products'] as $product) {
         if (strtolower($product['sku']) == strtolower($sku)) {
+            if ($product['total_purchased_seconds'] < 0) {
+                return -1;
+            }
+
             $purchasedSeconds += $product['total_purchased_seconds'];
             continue;
         }
@@ -800,6 +806,10 @@ function rexshop_purchased_seconds($request, $sku)
  */
 function rexshop_price_per_seconds($price, $seconds)
 {
+    if ($seconds < 0) {
+        return $price;
+    }
+
     return $price / $seconds;
 }
 
@@ -898,8 +908,9 @@ function rexshop_admin()
             }
 
             $remainingSeconds = rexshop_remaining_seconds($userId);
+            $purchasedSeconds = rexshop_seconds_from_duration($selectedProduct['prices'][0]['duration'], $selectedProduct['prices'][0]['time']);
 
-            $enddate = TIME_NOW + $remainingSeconds + rexshop_seconds_from_duration($selectedProduct['prices'][0]['duration'], $selectedProduct['prices'][0]['time']);
+            $enddate = $purchasedSeconds <= -1 ? -1 : TIME_NOW + $remainingSeconds + $purchasedSeconds;
             $payload = [
                 'uid' => $userId,
                 'product_sku' => null,
@@ -1144,7 +1155,7 @@ function rexshop_store_transaction($request, $uid, $enddate, $productSku = null)
         'transaction_from' => (int) $request['order']['initiated_at'],
         'country' => rexshop_regex_escape($request['customer']['country'], '/[^a-zA-Z]/'),
         'enddate' => (int) $enddate,
-        'expired' => $enddate <= 0 ? 1 : 0
+        'expired' => $enddate <= TIME_NOW && $enddate > -1 ? 1 : 0
     ]);
 }
 
@@ -1170,6 +1181,9 @@ function rexshop_seconds_from_duration($duration, $time)
         case 'year':
         case 'years':
             return SECONDS_PER_DAY * 365 * $time;
+        case 'unlimited':
+        case 'lifetime':
+            return -1;
         default:
             return 0;
     }
