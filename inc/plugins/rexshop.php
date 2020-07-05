@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.03",
+        "version"        => "1.04",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -55,6 +55,8 @@ function rexshop_install()
         "name" => "rexshop_client_id",
         "title" => "RexShop Client Id",
         "description" => "Type your RexShop Client Id.",
+        "optionscode" => 'text',
+        "value" => '',
         "disporder" => 0,
         "gid" => intval($gid),
     ]);
@@ -62,6 +64,8 @@ function rexshop_install()
         "name" => "rexshop_secret",
         "title" => "RexShop Secret",
         "description" => "Type your RexShop Secret.",
+        "optionscode" => 'text',
+        "value" => '',
         "disporder" => 1,
         "gid" => intval($gid),
     ]);
@@ -69,6 +73,8 @@ function rexshop_install()
         "name" => "rexshop_api_key",
         "title" => "RexShop Api Key",
         "description" => "Type your RexShop API Key.",
+        "optionscode" => 'text',
+        "value" => '',
         "disporder" => 2,
         "gid" => intval($gid),
     ]);
