@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.04",
+        "version"        => "1.05",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -73,6 +73,15 @@ function rexshop_install()
         "name" => "rexshop_api_key",
         "title" => "RexShop Api Key",
         "description" => "Type your RexShop API Key.",
+        "optionscode" => 'text',
+        "value" => '',
+        "disporder" => 2,
+        "gid" => intval($gid),
+    ]);
+    $db->insert_query("settings", [
+        "name" => "rexshop_exclude_usergroups",
+        "title" => "Exclude Usergroups",
+        "description" => "A comma seperated list of usergroups NOT allowed to buy your product. (Example: 2,3,8,10)",
         "optionscode" => 'text',
         "value" => '',
         "disporder" => 2,
@@ -198,7 +207,7 @@ function rexshop_payment_page()
     $lang->load('rexshop');
 
     if ($mybb->input['action'] == 'store') {
-        if (!$mybb->user['uid']) {
+        if (!$mybb->user['uid'] || !rexshop_allowed_to_buy($mybb->user['usergroup'])) {
             error_no_permission();
         }
         if (!isset($mybb->settings['rexshop_client_id'])) {
@@ -1193,6 +1202,19 @@ function rexshop_seconds_from_duration($duration, $time)
         default:
             return 0;
     }
+}
+
+function rexshop_allowed_to_buy($usergroup)
+{
+    global $mybb;
+
+    if (!empty($mybb->settings['rexshop_exclude_usergroups'])) {
+        $usergroups = explode(',', ltrim(rtrim(trim($mybb->settings['rexshop_exclude_usergroups'], ' '), ','), ','));
+
+        return !in_array((int) $usergroup, $usergroups);
+    }
+
+    return true;
 }
 
 function rexshop_on_success()
