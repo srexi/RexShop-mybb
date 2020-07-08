@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.05",
+        "version"        => "1.06",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -894,7 +894,7 @@ function rexshop_admin()
                 redirect('index.php?module=user-rexshop', $lang->error_invalid_username);
             }
 
-            $products = rexshop_fetch_products();
+            $products = rexshop_fetch_products(true);
 
             $selectedProduct = null;
             foreach ($products as $product) {
@@ -957,7 +957,7 @@ function rexshop_admin()
     ], 'rexshop');
 
     if (!$mybb->input['action']) { //Gifts
-        $products = rexshop_fetch_products();
+        $products = rexshop_fetch_products(true);
 
         $query = $db->simple_select("usergroups", "gid, title", "gid != '1'", ['order_by' => 'title']);
         while ($usergroup = $db->fetch_array($query)) {
@@ -1229,9 +1229,9 @@ function rexshop_on_failure()
     exit;
 }
 
-function rexshop_fetch_products()
+function rexshop_fetch_products($acp = false)
 {
-    global $mybb;
+    global $db, $mybb;
 
     if (!isset($mybb->settings['rexshop_api_key'])) {
         return [];
@@ -1244,7 +1244,55 @@ function rexshop_fetch_products()
 
     $result = json_decode($response, true);
 
-    return $result['products']['data'] ?? [];
+    $productResponse = $result['products']['data'] ?? [];
+
+    $products = [];
+    if ($acp === false) {
+        foreach ($productResponse as $product) {
+            $newProduct = $product;
+            $newProduct['prices'] = [];
+
+            foreach ($product['prices'] as &$price) {
+                foreach ($price['addons'] as $addon) {
+                    if (!in_array(strtolower($addon['name']), ['onlyusergroups', 'excludeusergroups'])) {
+                        continue;
+                    }
+
+                    $usergroups = explode(',', ltrim(rtrim(trim($addon['value'], ' '), ','), ','));
+                    if (empty($usergroups)) {
+                        continue;
+                    }
+
+                    foreach ($usergroups as $usergroup) {
+                        $usergroupId = $usergroup;
+                        if (!is_numeric($usergroup)) {
+                            $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "usergroups` WHERE LOWER(`title`)='" . strtolower($usergroup) . "' LIMIT 1");
+                            if ($db->num_rows($query) > 0) {
+                                $usergroupId = (int) $db->fetch_field($query, "gid");
+                            }
+                        }
+
+                        if (strtolower($addon['name']) === 'onlyusergroups') {
+                            if ((int) $mybb->user['usergroup'] !== (int) $usergroupId) {
+                                continue 3;
+                            }
+                        } else if (strtolower($addon['name']) === 'excludeusergroups') {
+                            if ((int) $mybb->user['usergroup'] === (int) $usergroupId) {
+                                $newProduct['prices'][] = $price;
+                                continue 3;
+                            }
+                        }
+                    }
+                }
+            }
+
+            $products[] = $newProduct;
+        }
+    } else {
+        $products = $productResponse;
+    }
+
+    return $products;
 }
 
 function rexshop_regex_escape($input, $regex = null, $replacement = '')
