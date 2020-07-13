@@ -1284,6 +1284,8 @@ function rexshop_fetch_products($acp = false)
                         }
                     }
                 }
+
+                $newProduct['prices'][] = $price;
             }
 
             $products[] = $newProduct;
