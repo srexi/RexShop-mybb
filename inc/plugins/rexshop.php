@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.06",
+        "version"        => "1.07",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
