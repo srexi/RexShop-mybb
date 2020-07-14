@@ -207,7 +207,7 @@ function rexshop_payment_page()
     $lang->load('rexshop');
 
     if ($mybb->input['action'] == 'store') {
-        if (!$mybb->user['uid'] || !rexshop_allowed_to_buy($mybb->user['usergroup'])) {
+        if (!$mybb->user['uid'] || !rexshop_allowed_view_store($mybb->user['usergroup'])) {
             error_no_permission();
         }
         if (!isset($mybb->settings['rexshop_client_id'])) {
@@ -1196,7 +1196,7 @@ function rexshop_seconds_from_duration($duration, $time)
     }
 }
 
-function rexshop_allowed_to_buy($usergroup)
+function rexshop_allowed_view_store($usergroup)
 {
     global $mybb;
 
