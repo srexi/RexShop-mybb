@@ -80,8 +80,8 @@ function rexshop_install()
     ]);
     $db->insert_query("settings", [
         "name" => "rexshop_exclude_usergroups",
-        "title" => "Exclude Usergroups",
-        "description" => "A comma seperated list of usergroups NOT allowed to buy your product. (Example: 2,3,8,10)",
+        "title" => "Excluded Usergroups",
+        "description" => "A comma seperated list of usergroups NOT allowed to view your store. (Example: 2,3,8,10)",
         "optionscode" => 'text',
         "value" => '',
         "disporder" => 2,
