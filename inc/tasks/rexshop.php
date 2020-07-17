@@ -21,6 +21,14 @@ function task_rexshop($task)
 
     while ($sub = $db->fetch_array($query)) {
         //send pm about expired subscription
+        if (!isset($sub['uid']) || $sub['uid'] <= 0) {
+            $db->update_query('rexshop_logs', [
+                'expired' => 1
+            ], 'id=' . $sub['id']);
+
+            continue;
+        }
+
         rexshop_send_pm(
             "Your Subscription has Expired!",
             $lang->sprintf("Your subscription has just expired.\nPlease renew your subscription by clicking here: [url=" . $mybb->settings['bburl'] . "/misc.php?action=store][u][color=#32CD32]Renew Subscription[/color][/u][/url]"),
