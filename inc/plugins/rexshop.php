@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.07",
+        "version"        => "1.08",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -80,8 +80,8 @@ function rexshop_install()
     ]);
     $db->insert_query("settings", [
         "name" => "rexshop_exclude_usergroups",
-        "title" => "Excluded Usergroups",
-        "description" => "A comma seperated list of usergroups NOT allowed to view your store. (Example: 2,3,8,10)",
+        "title" => "Exclude Usergroups",
+        "description" => "A comma seperated list of usergroups NOT allowed to buy your product. (Example: 2,3,8,10)",
         "optionscode" => 'text',
         "value" => '',
         "disporder" => 2,
@@ -207,7 +207,7 @@ function rexshop_payment_page()
     $lang->load('rexshop');
 
     if ($mybb->input['action'] == 'store') {
-        if (!$mybb->user['uid'] || !rexshop_allowed_view_store($mybb->user['usergroup'])) {
+        if (!$mybb->user['uid'] || !rexshop_allowed_to_buy($mybb->user['usergroup'])) {
             error_no_permission();
         }
         if (!isset($mybb->settings['rexshop_client_id'])) {
@@ -380,7 +380,7 @@ function rexshop_webhook_handler()
  * Handles a completed transaction.
  *
  * @param [array] $request
- * @return httpresponse
+ * @return void
  */
 function handleCompletedTransaction($request)
 {
@@ -425,10 +425,10 @@ function handleCompletedTransaction($request)
 }
 
 /**
- * Handles a pending transaction (funds are being processed by the payment processor).
+ * Handles a pending transaction (funds are being processed by the payment gateway).
  *
  * @param [array] $request
- * @return httpresponse
+ * @return void
  */
 function handlePendingTransaction($request)
 {
@@ -446,7 +446,7 @@ function handlePendingTransaction($request)
  * Handles a refunded transaction (you voluntarily refunded the transaction).
  *
  * @param [array] $request
- * @return httpresponse
+ * @return void
  */
 function handleRefundedTransaction($request)
 {
@@ -506,7 +506,7 @@ function handleRefundedTransaction($request)
  * Handles a canceled disputed transaction (merchant won the dispute).
  *
  * @param [array] $request
- * @return httpresponse
+ * @return void
  */
 function handleDisputeCanceledTransaction($request)
 {
@@ -566,7 +566,7 @@ function handleDisputeCanceledTransaction($request)
  * Handles a disputed transaction.
  *
  * @param [array] $request
- * @return httpresponse
+ * @return void
  */
 function handleDisputedTransaction($request)
 {
@@ -590,18 +590,31 @@ function handleDisputedTransaction($request)
         $banned_groups[] = (int) $gid;
     }
 
-    //The user is not currently banned, it is time to ban.
+    //The user is not currently banned, unban.
     if (!in_array($user['usergroup'], $banned_groups)) {
         rexshop_ban_user($user);
     }
 
-    //Figure out what usergroup the user had purchased.
+    //Figure out what usergroup the user is receiving.
     $usergroup = rexshop_purchased_usergroup($request);
     if (!isset($usergroup) || $usergroup < 1) {
         return rexshop_on_failure();
     }
 
-    rexshop_send_pm("Open Subscription Dispute", "You have opened a dispute. Please resolve this ASAP.", (int) $userId);
+    //Figure out how much time to suspend 
+    $secondsToSuspend = rexshop_purchased_seconds($request, $usergroup);
+
+    //Figure out how much time the user has left.
+    $remainingSeconds = rexshop_remaining_seconds($userId, false);
+
+    $completed = REXSHOP_STATUS_COMPLETED;
+
+    if (($remainingSeconds - $secondsToSuspend) <= 0) {
+        $db->query("UPDATE `" . TABLE_PREFIX . "rexshop_logs` SET `expired`='1' WHERE `transaction_id`='" . rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/') . "' AND `transaction_status`='" . $completed . "'");
+        rexshop_change_usergroup($userId, REXSHOP_USERGROUP_EXPIRED);
+    }
+
+    rexshop_send_pm("Open Subscription Dispute", "You have opened a dispute. Please resolve this in ban appeals ASAP.", (int) $userId);
 
     return rexshop_on_success();
 }
@@ -610,7 +623,7 @@ function handleDisputedTransaction($request)
  * Handles a reversed transaction (merchant lost the dispute).
  *
  * @param [array] $request
- * @return httpresponse
+ * @return void
  */
 function handleReversedTransaction($request)
 {
@@ -619,10 +632,11 @@ function handleReversedTransaction($request)
         return rexshop_on_failure();
     }
 
-    rexshop_send_pm("Dispute Closed", "The dispute has been closed in your favor. You will remain banned. If you wish to resolve it later feel free to contact us.", $userId);
+    rexshop_send_pm("Dispute Closed", "The dispute has been closed in your favor. You will remain banned. If you wish to resolve it in ban appeals later feel free to contact us.", $userId);
 
     return rexshop_on_success();
 }
+
 
 /**
  * Fetches the customer's user id from custom parameter in webhook.
@@ -643,12 +657,6 @@ function rexshop_uid_from_custom($request)
     return (int) $decoded['uid'] ?? (int) $userId;
 }
 
-/**
- * Fetches the purchased usergroup.
- *
- * @param [array] $request
- * @return integer
- */
 function rexshop_purchased_usergroup($request)
 {
     global $db;
@@ -732,7 +740,7 @@ function rexshop_products_usergroup($product)
 }
 
 /**
- * Fetches the remaining subscription seconds for a user. By default it also expires any currently non expired subscription.
+ * Fetches the remaining subscription seconds for a user.
  *
  * @param [integer] $userId
  * @param boolean $expiresExisting
@@ -766,7 +774,7 @@ function rexshop_remaining_seconds($userId, $expireExisting = true)
 }
 
 /**
- * Fetches the amount of purchased seconds
+ * Fetches the purchased sub seconds
  *
  * @param [array] $request
  * @param [string] $sku
@@ -1034,7 +1042,7 @@ function rexshop_transaction_duplicate($request)
 }
 
 /**
- * Checks the authenticity of the webhook request. By verifying the signature against the payload and your secret key.
+ * Verify the origin of the webhook message was from rex digital shop.
  *
  * @param [array] $request
  * @return boolean
@@ -1196,7 +1204,7 @@ function rexshop_seconds_from_duration($duration, $time)
     }
 }
 
-function rexshop_allowed_view_store($usergroup)
+function rexshop_allowed_to_buy($usergroup)
 {
     global $mybb;
 
@@ -1246,7 +1254,7 @@ function rexshop_fetch_products($acp = false)
 
             foreach ($product['prices'] as &$price) {
                 foreach ($price['addons'] as $addon) {
-                    if (!in_array(strtolower($addon['name']), ['onlyusergroups', 'excludeusergroups'])) {
+                    if (!in_array(strtolower($addon['name']), ['onlyusergroups', 'onlyusergroup', 'excludeusergroup', 'excludeusergroups'])) {
                         continue;
                     }
 
@@ -1264,13 +1272,12 @@ function rexshop_fetch_products($acp = false)
                             }
                         }
 
-                        if (strtolower($addon['name']) === 'onlyusergroups') {
+                        if (strtolower($addon['name']) === 'onlyusergroups' || strtolower($addon['name']) === 'onlyusergroup') {
                             if ((int) $mybb->user['usergroup'] !== (int) $usergroupId) {
                                 continue 3;
                             }
-                        } else if (strtolower($addon['name']) === 'excludeusergroups') {
+                        } else if (strtolower($addon['name']) === 'excludeusergroups' || strtolower($addon['name']) === 'excludeusergroup') {
                             if ((int) $mybb->user['usergroup'] === (int) $usergroupId) {
-                                $newProduct['prices'][] = $price;
                                 continue 3;
                             }
                         }
@@ -1289,14 +1296,6 @@ function rexshop_fetch_products($acp = false)
     return $products;
 }
 
-/**
- * Regex based escape-and-replace for a given string
- *
- * @param string $input
- * @param [string|null] $regex
- * @param [string] $replacement
- * @return string
- */
 function rexshop_regex_escape($input, $regex = null, $replacement = '')
 {
     global $db;
