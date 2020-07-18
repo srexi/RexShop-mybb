@@ -84,7 +84,7 @@ function rexshop_install()
         "description" => "A comma seperated list of usergroups NOT allowed to buy your product. (Example: 2,3,8,10)",
         "optionscode" => 'text',
         "value" => '',
-        "disporder" => 2,
+        "disporder" => 3,
         "gid" => intval($gid),
     ]);
     rebuild_settings();
@@ -230,73 +230,33 @@ function rexshop_payment_page()
                 </head>
             <body>' . $header;
 
-        if ($mybb->input['plan_id'] && $mybb->input['my_post_key'] == $mybb->post_code) {
-            verify_post_check($mybb->input['my_post_key']);
 
-            $products = rexshop_fetch_products();
+        $products = rexshop_fetch_products();
 
-            $selectedProduct = null;
-            foreach ($products as $product) {
-                if (!isset($mybb->input[$product['sku']])) {
-                    continue;
-                }
-
-                foreach ($product['prices'] as $price) {
-                    if ($price['plan_id'] != $mybb->input['plan_id'][$product['sku']]) {
-                        continue;
-                    }
-
-                    $product['prices'] = array_values(array_filter($product['prices'], function ($price) use ($mybb, $product) {
-                        return $price['plan_id'] == $mybb->input['plan_id'][$product['sku']];
-                    }));
-
-                    $selectedProduct = $product;
-                    break;
-                }
+        $payments = '';
+        foreach ($products as $product) {
+            $options = '';
+            foreach ($product['prices'] as $price) {
+                $options .= '<option value="' . $price['plan_id'] . '">' . $price['name'] . ' ' . $price['currency'] . $price['price'] . ' (' . $price['time'] . ' ' . $price['duration']  . ')</option>';
             }
 
-            if (!isset($selectedProduct) || empty($selectedProduct['prices'])) {
-                redirect('misc.php?action=store', $lang->error_invalid_subscription);
-            }
-
-            add_breadcrumb("{$selectedProduct['name']} - {$selectedProduct['prices'][0]['name']} ({$selectedProduct['prices'][0]['time']} {$selectedProduct['prices'][0]['duration']}) - {$selectedProduct['prices'][0]['currency']}{$selectedProduct['prices'][0]['price']}", "misc.php?action=store");
-
-            $custom = base64_encode(serialize([
-                'uid' => (int) $mybb->user['uid'],
-            ]));
-
-            $contents .= "
-                <form method='POST' action='https://shop.rexdigital.group/checkout'>
-                    <input name='client_id' value='" . rexshop_regex_escape($mybb->settings['rexshop_client_id'], '/[^a-zA-Z0-9]/') . "' type='hidden'>
-                    <input name='products[0][plan_id]' value='" . rexshop_regex_escape($selectedProduct['prices'][0]['plan_id'], '/[^a-zA-Z0-9]/') . "' type='hidden'>
-                    <input name='custom' value='${custom}' type='hidden'>
-                    <button class='button' type='submit'>Go to checkout</button>
-                </form>";
-        } else {
-            $products = rexshop_fetch_products();
-
-            $payments = '';
-            foreach ($products as $product) {
-                $options = '';
-                foreach ($product['prices'] as $price) {
-                    $options .= '<option value="' . $price['plan_id'] . '">' . $price['name'] . ' ' . $price['currency'] . $price['price'] . ' (' . $price['time'] . ' ' . $price['duration']  . ')</option>';
-                }
-
-                $payments .= '
+            $payments .= '
                     <fieldset>
                         <legend><strong>' . $product['name'] . '</strong></legend>
                         <div class="smalltext" style="width: 65%;">
                             ' . $product['description'] . '
                         </div>
                         <div align="right" style="margin-right: 100px;">
-                            <select style="width: 240px;" name="plan_id[' . $product["sku"] . ']">
-                                ' . $options . '
-                            </select> 
-                            
-                            <button type="submit" name="' . $product["sku"] . '" class="button">Order</button>
+                            <form method="POST" action="https://shop.rexdigital.group/checkout">
+                                <input name="client_id" value="' . rexshop_regex_escape($mybb->settings['rexshop_client_id'], '/[^a-zA-Z0-9]/') . '" type="hidden">
+                                <select style="width: 240px;" name="products[0][plan_id]">
+                                    ' . $options . '
+                                </select> 
+                                
+                                <button type="submit" name="' . $product["sku"] . '" class="button">Order Now</button>
+                            </form>
                         </div>
                     </fieldset>';
-            }
 
             if (empty($payments)) {
                 $payments = '<p style="text-align: center;">' . $lang->no_subscription_options . '</p>';
@@ -315,19 +275,16 @@ function rexshop_payment_page()
             }
 
             $contents .= "
-                <form action='misc.php?action=store' method='post'>
-                    <input type='hidden' name='my_post_key' value='{$mybb->post_code}' />
-                    <table border='0' cellspacing='{$theme['borderwidth']}' cellpadding='{$theme['tablespace']}' class='tborder'>
-                        <tr>
-                            <td class='thead' align='center'><strong>Store</strong></td>
-                        </tr>
-                        <tr>
-                            <td class='trow1' valign='bottom'>
-                                {$payments}
-                            </td>
-                        </tr>
-                    </table>
-                </form>";
+                <table border='0' cellspacing='{$theme['borderwidth']}' cellpadding='{$theme['tablespace']}' class='tborder'>
+                    <tr>
+                        <td class='thead' align='center'><strong>Store</strong></td>
+                    </tr>
+                    <tr>
+                        <td class='trow1' valign='bottom'>
+                            {$payments}
+                        </td>
+                    </tr>
+                </table>";
         }
         $contents .= $footer . '
         </body>
