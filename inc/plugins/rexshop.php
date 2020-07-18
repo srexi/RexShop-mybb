@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.08",
+        "version"        => "1.09",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -233,6 +233,10 @@ function rexshop_payment_page()
 
         $products = rexshop_fetch_products();
 
+        $custom = base64_encode(serialize([
+            'uid' => (int) $mybb->user['uid'],
+        ]));
+
         $payments = '';
         foreach ($products as $product) {
             $options = '';
@@ -249,6 +253,7 @@ function rexshop_payment_page()
                         <div align="right" style="margin-right: 100px;">
                             <form method="POST" action="https://shop.rexdigital.group/checkout">
                                 <input name="client_id" value="' . rexshop_regex_escape($mybb->settings['rexshop_client_id'], '/[^a-zA-Z0-9]/') . '" type="hidden">
+                                <input name="custom" value="' . $custom . '" type="hidden">
                                 <select style="width: 240px;" name="products[0][plan_id]">
                                     ' . $options . '
                                 </select> 
