@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.09",
+        "version"        => "1.10",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -101,6 +101,7 @@ function rexshop_install()
         `suspended_seconds` int(11) default '0',
         `enddate` int(12) NOT NULL,
         `expired` tinyint(1) default '0',
+        `addons` text default null,
         `transaction_from` int(12),
         PRIMARY KEY  (`id`)
     ) ENGINE=MyISAM{$collation}");
@@ -1132,6 +1133,7 @@ function rexshop_store_transaction($request, $uid, $enddate, $productSku = null)
         'transaction_from' => (int) $request['order']['initiated_at'],
         'country' => rexshop_regex_escape($request['customer']['country'], '/[^a-zA-Z]/'),
         'enddate' => (int) $enddate,
+        'addons' => $request['order']['products'][0]['addons'] ?? null,
         'expired' => $enddate <= TIME_NOW && $enddate > -1 ? 1 : 0
     ]);
 }
