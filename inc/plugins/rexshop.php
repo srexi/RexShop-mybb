@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.10",
+        "version"        => "1.11",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -238,6 +238,18 @@ function rexshop_payment_page()
             'uid' => (int) $mybb->user['uid'],
         ]));
 
+        $enddate = (int) (TIME_NOW + rexshop_remaining_seconds(intval($mybb->user['uid']), false));
+
+        if ($enddate > TIME_NOW) {
+            $offsetquery = $db->simple_select("users", "timezone", "uid='" . intval($mybb->user['uid']) . "'");
+            $offset = (int) $db->fetch_field($offsetquery, "timezone");
+            $enddate += (3600 * $offset);
+
+            $contents .= "Your subscription expires: " . date('j, M Y H:m', $enddate) . " GMT" . (strpos($offset, '-') !== false ? $offset : "+{$offset}") . "<br><br>";
+        } else if ($enddate <= -1) {
+            $contents .= "Your subscription will never expire";
+        }
+
         $payments = '';
         foreach ($products as $product) {
             $options = '';
@@ -267,34 +279,23 @@ function rexshop_payment_page()
             if (empty($payments)) {
                 $payments = '<p style="text-align: center;">' . $lang->no_subscription_options . '</p>';
             }
-
-            $enddate = (int) (TIME_NOW + rexshop_remaining_seconds(intval($mybb->user['uid']), false));
-
-            if ($enddate > TIME_NOW) {
-                $offsetquery = $db->simple_select("users", "timezone", "uid='" . intval($mybb->user['uid']) . "'");
-                $offset = (int) $db->fetch_field($offsetquery, "timezone");
-                $enddate += (3600 * $offset);
-
-                $contents .= "Your subscription expires: " . date('j, M Y H:m', $enddate) . " GMT" . (strpos($offset, '-') !== false ? $offset : "+{$offset}") . "<br><br>";
-            } else if ($enddate <= -1) {
-                $contents .= "Your subscription will never expire";
-            }
-
-            $contents .= "
-                <table border='0' cellspacing='{$theme['borderwidth']}' cellpadding='{$theme['tablespace']}' class='tborder'>
-                    <tr>
-                        <td class='thead' align='center'><strong>Store</strong></td>
-                    </tr>
-                    <tr>
-                        <td class='trow1' valign='bottom'>
-                            {$payments}
-                        </td>
-                    </tr>
-                </table>";
         }
+
+        $contents .= "
+        <table border='0' cellspacing='{$theme['borderwidth']}' cellpadding='{$theme['tablespace']}' class='tborder'>
+            <tr>
+                <td class='thead' align='center'><strong>Store</strong></td>
+            </tr>
+            <tr>
+                <td class='trow1' valign='bottom'>
+                    {$payments}
+                </td>
+            </tr>
+        </table>";
+
         $contents .= $footer . '
-        </body>
-        </html>';
+            </body>
+            </html>';
 
         output_page($contents);
     }
