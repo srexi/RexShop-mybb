@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.12",
+        "version"        => "1.13",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -377,7 +377,7 @@ function handleCompletedTransaction($request)
         $banned_groups[] = (int) $gid;
     }
 
-    if (in_array($usergroup, $banned_groups)) {   //Move the user to the purchased usergroup if they get unbanned.
+    if (!in_array($usergroup, $banned_groups)) {   //Move the user to the purchased usergroup if they get unbanned.
         rexshop_change_usergroup($userId, $usergroup);
     } else { //Move the user to the purchased usergroup.
         rexshop_change_on_unban_usergroup($userId, $usergroup);
@@ -1015,13 +1015,11 @@ function rexshop_verify_webhook($request)
 {
     global $mybb;
 
-    $hash = hash_hmac(
+    return $request['RDG_WH_SIGNATURE'] === hash_hmac(
         'sha256',
         $request['order']['transaction_id'] . $request['status'],
         $mybb->settings['rexshop_secret']
     );
-
-    return $request['RDG_WH_SIGNATURE'] === $hash;
 }
 
 /**
