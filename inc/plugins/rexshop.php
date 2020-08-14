@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.11",
+        "version"        => "1.12",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -627,7 +627,7 @@ function rexshop_purchased_usergroup($request)
 
     $usergroup = -1;
 
-    foreach ($request['products'] as $product) {
+    foreach ($request['order']['products'] as $product) {
         foreach ($product['addons'] as $addon) {
             if (strtolower($addon['name']) !== 'usergroup') {
                 continue;
@@ -1015,11 +1015,13 @@ function rexshop_verify_webhook($request)
 {
     global $mybb;
 
-    return $request['RDG_WH_SIGNATURE'] === hash_hmac(
+    $hash = hash_hmac(
         'sha256',
         $request['order']['transaction_id'] . $request['status'],
         $mybb->settings['rexshop_secret']
     );
+
+    return $request['RDG_WH_SIGNATURE'] === $hash;
 }
 
 /**
@@ -1134,7 +1136,7 @@ function rexshop_store_transaction($request, $uid, $enddate, $productSku = null)
         'transaction_from' => (int) $request['order']['initiated_at'],
         'country' => rexshop_regex_escape($request['customer']['country'], '/[^a-zA-Z]/'),
         'enddate' => (int) $enddate,
-        'addons' => $request['order']['products'][0]['addons'] ?? null,
+        'addons' => json_encode($request['order']['products'][0]['addons'] ?? []),
         'expired' => $enddate <= TIME_NOW && $enddate > -1 ? 1 : 0
     ]);
 }
