@@ -33,7 +33,7 @@ function rexshop_info()
         "website"        => "https://shop.rexdigital.group",
         "author"        => "RexDigitalGroup",
         "authorsite"    => "https://rexdigital.group",
-        "version"        => "1.13",
+        "version"        => "1.14",
         "guid"             => "",
         "compatibility"    => "18*,16*"
     );
@@ -1130,7 +1130,7 @@ function rexshop_store_transaction($request, $uid, $enddate, $productSku = null)
         'uid' => intval($uid),
         'product_sku' => rexshop_regex_escape($productSku, '/[^a-zA-Z0-9]/'),
         'transaction_id' => rexshop_regex_escape($request['order']['transaction_id'], '/[^a-zA-Z0-9]/'),
-        'transaction_status' => rexshop_regex_escape($request['transaction_status'], '/[^a-zA-Z0-9]/'),
+        'transaction_status' => rexshop_regex_escape($request['status'], '/[^a-zA-Z0-9]/'),
         'transaction_from' => (int) $request['order']['initiated_at'],
         'country' => rexshop_regex_escape($request['customer']['country'], '/[^a-zA-Z]/'),
         'enddate' => (int) $enddate,
