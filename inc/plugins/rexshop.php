@@ -1,10 +1,11 @@
 <?php
 
-if (!defined("IN_MYBB")) {
+if (! defined("IN_MYBB")) {
     die("This file cannot be accessed directly.");
 }
-
-define('TIME_NOW', time());
+if (! defined('TIME_NOW')) {
+    define('TIME_NOW', time());
+}
 define('BAN_REASON_CHARGEBACK', 'payment_disputed');
 define('REXSHOP_USERGROUP_EXPIRED', 2);
 define('REXSHOP_STATUS_COMPLETED', 'completed');
