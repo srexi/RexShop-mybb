@@ -46,5 +46,5 @@ function task_rexshop($task)
         ], 'id=' . $sub['id']);
     }
 
-    add_task_log($task, $lang->task_rexshop_ran);
+    add_task_log($task, property_exists($lang, 'task_rexshop_ran') ? $lang->task_rexshop_ran : 'RexShop Expired Subscriptions Ran Successfully.'));
 }
