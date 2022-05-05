@@ -1243,7 +1243,7 @@ function rexshop_fetch_products($acp = false)
                     }
                     
                     if (mb_strtolower($addon['name']) === 'onlyusergroups' || mb_strtolower($addon['name']) === 'onlyusergroup') {
-                        if (! in_array((int) $mybb->user['usergroup'], $usergroupIds) {
+                        if (! in_array((int) $mybb->user['usergroup'], $usergroupIds)) {
                             continue 2;
                         }
                     } else if (mb_strtolower($addon['name']) === 'excludeusergroups' || mb_strtolower($addon['name']) === 'excludeusergroup') {
