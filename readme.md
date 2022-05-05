@@ -23,6 +23,11 @@ And in the value field you write the id of the usergroup you would like to give 
 Then attach the addon to all your products which awards that usergroup.
 You can create multiple addons with the same name if you want different producs to give different usergroups.
 
+## Addon Variables (Watch the youtube video below to learn about addons)
+usergroup - this will decide which usergroup a user will end up in (use the group id (gid)
+excludeusergroups - this is a comma seperated list (Example: 2,3,4) of usergroups that are **not allowed** to purchase this product.
+onlyusergroups - this is a comma seperated list (Example: 2,3,4) of usergroups that are **the only ones allowed** to purchase this product.
+
 # Video Tutorial
 See the setup process in a short video:
 https://www.youtube.com/watch?v=OzDC_Nkdwm4
