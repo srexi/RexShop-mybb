@@ -257,6 +257,10 @@ function rexshop_payment_page()
             foreach ($product['prices'] as $price) {
                 $options .= '<option value="' . $price['plan_id'] . '">' . $price['name'] . ' ' . $price['currency'] . $price['price'] . ' (' . $price['time'] . ' ' . $price['duration']  . ')</option>';
             }
+            
+            if (empty($options)) {
+                continue;
+            }
 
             $payments .= '
                     <fieldset>
@@ -276,10 +280,10 @@ function rexshop_payment_page()
                             </form>
                         </div>
                     </fieldset>';
-
-            if (empty($payments)) {
-                $payments = '<p style="text-align: center;">' . $lang->no_subscription_options . '</p>';
-            }
+        }
+        
+        if (empty($payments)) {
+            $payments = '<p style="text-align: center;">' . $lang->no_subscription_options . '</p>';
         }
 
         $contents .= "
