@@ -239,7 +239,7 @@ function rexshop_payment_page()
             'uid' => (int) $mybb->user['uid'],
         ]));
 
-        $enddate = (int) (TIME_NOW + rexshop_remaining_seconds(intval($mybb->user['uid']), false));
+        $enddate = (int) (TIME_NOW + rexshop_remaining_seconds(intval($mybb->user['uid']), null, false));
 
         if ($enddate > TIME_NOW) {
             $offsetquery = $db->simple_select("users", "timezone", "uid='" . intval($mybb->user['uid']) . "'");
@@ -247,7 +247,7 @@ function rexshop_payment_page()
             $enddate += (3600 * $offset);
 
             $contents .= "Your subscription expires: " . date('j, M Y H:m', $enddate) . " GMT" . (strpos($offset, '-') !== false ? $offset : "+{$offset}") . "<br><br>";
-        } else if ($enddate <= -1) {
+        } elseif ($enddate <= -1) {
             $contents .= "Your subscription will never expire";
         }
 
@@ -367,12 +367,14 @@ function handleCompletedTransaction($request)
     }
 
     //How much seconds the user has remaining & expire old purchases.
-    $remainingSeconds = rexshop_remaining_seconds($userId);
+    $remainingSeconds = rexshop_remaining_seconds($userId, $request['order']['products'][0]['sku']);
 
     //Figure out how much seconds the user has purchased.
     $purchasedSeconds = rexshop_purchased_seconds($request, $request['order']['products'][0]['sku']);
 
-    $newEnddate = $purchasedSeconds < 0 ? -1 : TIME_NOW + $remainingSeconds + $purchasedSeconds;
+    $newEnddate = $purchasedSeconds < 0
+        ? -1
+        : TIME_NOW + $remainingSeconds + $purchasedSeconds;
 
     rexshop_store_transaction($request, $userId, $newEnddate, $request['order']['products'][0]['sku']);
 
@@ -445,7 +447,7 @@ function handleRefundedTransaction($request)
     $refundedSeconds = $refundedAmount * $pricePerSecond;
 
     //Check how much time the user has left
-    $remainingSeconds = rexshop_remaining_seconds($userId, false);
+    $remainingSeconds = rexshop_remaining_seconds($userId, $request['order']['products'][0]['sku'], false);
 
     //Subtract the time that was refunded.
     $newEndDate = TIME_NOW + ($remainingSeconds - $refundedSeconds);
@@ -570,11 +572,11 @@ function handleDisputedTransaction($request)
         return rexshop_on_failure();
     }
 
-    //Figure out how much time to suspend 
+    //Figure out how much time to suspend
     $secondsToSuspend = rexshop_purchased_seconds($request, $usergroup);
 
     //Figure out how much time the user has left.
-    $remainingSeconds = rexshop_remaining_seconds($userId, false);
+    $remainingSeconds = rexshop_remaining_seconds($userId, null, false);
 
     $completed = REXSHOP_STATUS_COMPLETED;
 
@@ -683,7 +685,7 @@ function rexshop_products_usergroup($product)
                 break 2;
             }
         }
-    } else if (isset($product['addons'])) {
+    } elseif (isset($product['addons'])) {
         foreach ($product['addons'] as $addon) {
             if (strtolower($addon['name']) !== 'usergroup') {
                 continue;
@@ -715,13 +717,18 @@ function rexshop_products_usergroup($product)
  * @param boolean $expiresExisting
  * @return integer
  */
-function rexshop_remaining_seconds($userId, $expireExisting = true)
+function rexshop_remaining_seconds($userId, $sku = null, $expireExisting = true)
 {
     global $db;
 
     $remainingSeconds = 0;
 
-    $query = $db->query("SELECT * FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `uid`='" . (int) $userId . "' AND `expired`='0'");
+    $queryString = "SELECT * FROM `" . TABLE_PREFIX . "rexshop_logs` WHERE `uid`='" . (int) $userId . "' AND `expired`='0'";
+    if (isset($sku)) {
+        $queryString .= " AND `product_sku`='" . rexshop_regex_escape($sku, '/[^a-zA-Z0-9]/') . "'";
+    }
+
+    $query = $db->query($queryString);
     $resultCount = $db->num_rows($query);
     if ($resultCount <= 0) {
         return $remainingSeconds;
@@ -1231,7 +1238,7 @@ function rexshop_fetch_products($acp = false)
                     $usergroups = explode(',', ltrim(rtrim(trim($addon['value'], ' '), ','), ','));
                     if (empty($usergroups)) {
                         continue;
-                    }             
+                    }
                     
                     $usergroupIds = [];
                     foreach ($usergroups as $usergroup) {
@@ -1250,7 +1257,7 @@ function rexshop_fetch_products($acp = false)
                         if (! in_array((int) $mybb->user['usergroup'], $usergroupIds)) {
                             continue 2;
                         }
-                    } else if (mb_strtolower($addon['name']) === 'excludeusergroups' || mb_strtolower($addon['name']) === 'excludeusergroup') {
+                    } elseif (mb_strtolower($addon['name']) === 'excludeusergroups' || mb_strtolower($addon['name']) === 'excludeusergroup') {
                         if (in_array((int) $mybb->user['usergroup'], $usergroupIds)) {
                             continue 2;
                         }
