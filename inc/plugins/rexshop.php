@@ -554,6 +554,9 @@ function handleDisputedTransaction($request)
     }
 
     $user = $db->fetch_array($query, PDO::FETCH_ASSOC);
+    if (!isset($user['uid')) || intval($user['uid']) < 1) {
+         return rexshop_on_failure();
+    }
 
     $banned_groups = [];
     $q = $db->simple_select('usergroups', 'gid', 'isbannedgroup=1');
